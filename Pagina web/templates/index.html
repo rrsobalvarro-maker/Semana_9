@@ -1,0 +1,186 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gestor de pila LIFO</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+          rel="stylesheet">
+</head>
+
+<body class="bg-body-tertiary">
+<nav class="navbar navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="/">Gestor de pila LIFO</a>
+        <span class="navbar-text text-white">Python + Flask</span>
+    </div>
+</nav>
+
+<main class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <h1 class="display-6 fw-bold">Mi pila</h1>
+            <p class="lead text-secondary">
+                El último elemento que entra será el primero en salir.
+            </p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endwith %}
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <p class="text-secondary">Capacidad</p>
+                            <div class="display-5 fw-bold">{{ capacity }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <p class="text-secondary">Elementos</p>
+                            <div class="display-5 fw-bold">{{ count }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <p class="text-secondary">Disponibles</p>
+                            <div class="display-5 fw-bold">{{ available }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <section class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h2 class="h4">Apilar elemento</h2>
+                    <form action="/push" method="post">
+                        <input type="hidden" name="csrf_token"
+                               value="{{ csrf_token() }}">
+                        <div class="input-group input-group-lg">
+                            <input class="form-control" type="text"
+                                   name="item" maxlength="100"
+                                   placeholder="Ej. Libro A" required>
+                            <button class="btn btn-primary" type="submit"
+                                    {% if is_full %}disabled{% endif %}>
+                                + Apilar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <section class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h2 class="h4">Contenido de la pila</h2>
+
+                    {% if items %}
+                        <div class="list-group mb-3">
+                            {% for item in items %}
+                                <div class="list-group-item d-flex justify-content-between">
+                                    <span>{{ item }}</span>
+                                    {% if loop.first %}
+                                        <span class="badge text-bg-success">TOPE</span>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-secondary">
+                            La pila está vacía.
+                        </div>
+                    {% endif %}
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <form action="/pop" method="post">
+                            <input type="hidden" name="csrf_token"
+                                   value="{{ csrf_token() }}">
+                            <button class="btn btn-warning" type="submit"
+                                    {% if is_empty %}disabled{% endif %}>
+                                Desapilar tope
+                            </button>
+                        </form>
+
+                        <button class="btn btn-outline-primary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#topModal"
+                                {% if is_empty %}disabled{% endif %}>
+                            Consultar tope
+                        </button>
+
+                        <form action="/clear" method="post"
+                              onsubmit="return confirm('¿Vaciar toda la pila?')">
+                            <input type="hidden" name="csrf_token"
+                                   value="{{ csrf_token() }}">
+                            <button class="btn btn-outline-danger" type="submit"
+                                    {% if is_empty %}disabled{% endif %}>
+                                Vaciar pila
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h2 class="h4">Configurar capacidad</h2>
+                    <form action="/configure" method="post"
+                          class="row g-3 align-items-end">
+                        <input type="hidden" name="csrf_token"
+                               value="{{ csrf_token() }}">
+                        <div class="col-sm-6">
+                            <label for="capacity" class="form-label">
+                                Capacidad (1 a 100)
+                            </label>
+                            <input class="form-control" id="capacity"
+                                   name="capacity" type="number"
+                                   min="1" max="100" value="{{ capacity }}"
+                                   required>
+                        </div>
+                        <div class="col-sm-6">
+                            <button class="btn btn-primary" type="submit"
+                                    {% if not is_empty %}disabled{% endif %}>
+                                Guardar capacidad
+                            </button>
+                        </div>
+                    </form>
+                    {% if not is_empty %}
+                        <p class="form-text">
+                            Vacía la pila antes de cambiar su capacidad.
+                        </p>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+    </div>
+</main>
+
+<div class="modal fade" id="topModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5">Elemento en el tope</h2>
+                <button type="button" class="btn-close"
+                        data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                {% if top %}
+                    <p class="fs-5">{{ top }}</p>
+                {% else %}
+                    <p>La pila está vacía.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
